@@ -1,10 +1,8 @@
 <!DOCTYPE html>
 <html>
 <head>
-
 <meta name="viewport" content="width=device-width,initial-scale=1">
-
-<title>Password Vault</title>
+<title>Secure Pass Vault</title>
 
 <style>
 
@@ -18,7 +16,7 @@ padding:20px;
 }
 
 .container{
-max-width:450px;
+max-width:500px;
 width:100%;
 }
 
@@ -45,6 +43,13 @@ border:none;
 border-radius:6px;
 background:#3b82f6;
 color:white;
+cursor:pointer;
+}
+
+.smallbtn{
+width:auto;
+padding:5px 10px;
+margin-right:5px;
 }
 
 .pass{
@@ -54,11 +59,34 @@ margin-top:10px;
 border-radius:6px;
 }
 
-</style>
+.actions{
+margin-top:5px;
+}
 
+.search{
+margin-bottom:15px;
+}
+
+/* popup */
+
+#popup{
+position:fixed;
+top:20px;
+left:50%;
+transform:translateX(-50%);
+background:#22c55e;
+padding:10px 20px;
+border-radius:6px;
+display:none;
+z-index:1000;
+}
+
+</style>
 </head>
 
 <body>
+
+<div id="popup"></div>
 
 <div class="container">
 
@@ -68,13 +96,14 @@ border-radius:6px;
 
 <input type="password" id="master" placeholder="Master Password">
 
-<button id="loginBtn">Unlock with Password</button>
-
-<button id="bioBtn">Unlock with Biometrics</button>
+<button id="loginBtn">Unlock</button>
+<button id="bioBtn">Biometric Login</button>
 
 </div>
 
 <div id="vault" style="display:none">
+
+<input id="search" class="search" placeholder="Search site / username / password">
 
 <button id="addBtn">Add Password</button>
 <button id="lockBtn">Lock</button>
@@ -85,13 +114,13 @@ border-radius:6px;
 
 <div id="add" class="card" style="display:none">
 
-<h3>Add Password</h3>
+<h3 id="formTitle">Add Password</h3>
 
 <input id="site" placeholder="Site">
 <input id="user" placeholder="Username">
 <input id="pass" placeholder="Password">
 
-<button id="saveBtn">Create</button>
+<button id="saveBtn">Save</button>
 <button id="cancelBtn">Cancel</button>
 
 </div>
@@ -101,45 +130,53 @@ border-radius:6px;
 <script type="module">
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
-import { getFirestore, doc, setDoc, getDoc, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+import { getFirestore, doc, setDoc, getDoc, collection, addDoc, getDocs, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
 
-const firebaseConfig = {
-apiKey: "AIzaSyCTMFecKL6ab82UC_sfhEVPK8CPe6ZnFEI",
-authDomain: "my-password-92eb6.firebaseapp.com",
-projectId: "my-password-92eb6",
-storageBucket: "my-password-92eb6.firebasestorage.app",
-messagingSenderId: "784477596349",
-appId: "1:784477596349:web:5017c577de3d35f7ab25d4",
-measurementId: "G-ZGNM4LZVGM"
+const firebaseConfig={
+apiKey:"AIzaSyCTMFecKL6ab82UC_sfhEVPK8CPe6ZnFEI",
+authDomain:"my-password-92eb6.firebaseapp.com",
+projectId:"my-password-92eb6",
+storageBucket:"my-password-92eb6.firebasestorage.app",
+messagingSenderId:"784477596349",
+appId:"1:784477596349:web:5017c577de3d35f7ab25d4"
 };
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+const app=initializeApp(firebaseConfig);
+const db=getFirestore(app);
 
-let key = null;
+let key=null;
+let editId=null;
 
-/* HASH */
+/* popup */
+
+function popup(msg,color="#22c55e"){
+const p=document.getElementById("popup");
+p.innerText=msg;
+p.style.background=color;
+p.style.display="block";
+
+setTimeout(()=>{
+p.style.display="none";
+},2000);
+}
+
+/* hash */
 
 async function hash(text){
-
-const buf = await crypto.subtle.digest(
+const buf=await crypto.subtle.digest(
 "SHA-256",
 new TextEncoder().encode(text)
 );
-
 return btoa(String.fromCharCode(...new Uint8Array(buf)));
-
 }
 
-/* KEY */
+/* key */
 
 async function deriveKey(password){
 
-const enc = new TextEncoder();
-
-const material = await crypto.subtle.importKey(
+const material=await crypto.subtle.importKey(
 "raw",
-enc.encode(password),
+new TextEncoder().encode(password),
 {name:"PBKDF2"},
 false,
 ["deriveKey"]
@@ -160,20 +197,16 @@ false,
 
 }
 
-/* ENCRYPT */
+/* encrypt */
 
 async function encrypt(text){
 
-if(!key) throw "Key not ready";
+const iv=crypto.getRandomValues(new Uint8Array(12));
 
-const iv = crypto.getRandomValues(new Uint8Array(12));
-
-const encoded = new TextEncoder().encode(text);
-
-const cipher = await crypto.subtle.encrypt(
+const cipher=await crypto.subtle.encrypt(
 {name:"AES-GCM",iv},
 key,
-encoded
+new TextEncoder().encode(text)
 );
 
 return JSON.stringify({
@@ -183,42 +216,31 @@ data:Array.from(new Uint8Array(cipher))
 
 }
 
-/* DECRYPT */
+/* decrypt */
 
-async function decrypt(obj){
+async function decrypt(data){
 
-if(!key) throw "Key not ready";
+const obj=JSON.parse(data);
 
-const data = JSON.parse(obj);
-
-const iv = new Uint8Array(data.iv);
-const buf = new Uint8Array(data.data);
-
-const decrypted = await crypto.subtle.decrypt(
-{name:"AES-GCM",iv},
+const decrypted=await crypto.subtle.decrypt(
+{name:"AES-GCM",iv:new Uint8Array(obj.iv)},
 key,
-buf
+new Uint8Array(obj.data)
 );
 
 return new TextDecoder().decode(decrypted);
 
 }
 
-/* LOGIN */
+/* login */
 
 async function login(){
 
 const password=document.getElementById("master").value;
 
-if(!password){
-alert("Enter password");
-return;
-}
-
 const hashPass=await hash(password);
 
 const ref=doc(db,"users","vaultUser");
-
 const snap=await getDoc(ref);
 
 if(!snap.exists()){
@@ -227,60 +249,56 @@ await setDoc(ref,{masterHash:hashPass});
 
 key=await deriveKey(password);
 
+popup("Vault Created");
+
 openVault();
 
 return;
 
 }
 
-const savedHash=snap.data().masterHash;
+if(hashPass!==snap.data().masterHash){
 
-if(savedHash!==hashPass){
-
-alert("Wrong password");
+popup("Wrong Password","#ef4444");
 return;
 
 }
 
 key=await deriveKey(password);
 
+popup("Login Success");
+
 openVault();
 
 }
 
-/* BIOMETRIC */
+/* biometric */
 
 async function biometricLogin(){
 
-if(!window.PublicKeyCredential){
-alert("Biometric not supported");
-return;
-}
-
 try{
-
-const challenge=new Uint8Array(32);
-crypto.getRandomValues(challenge);
 
 await navigator.credentials.get({
 publicKey:{
-challenge,
+challenge:new Uint8Array(32),
 timeout:60000,
 userVerification:"required"
 }
 });
 
+popup("Biometric Success");
+
 openVault();
 
-}catch(e){
+}catch{
 
-alert("Biometric cancelled");
-
-}
+popup("Biometric Failed","#ef4444");
 
 }
 
-/* OPEN */
+}
+
+/* open */
 
 function openVault(){
 
@@ -291,19 +309,18 @@ loadPasswords();
 
 }
 
-/* LOAD PASSWORDS */
+/* load */
 
 async function loadPasswords(){
 
 const list=document.getElementById("list");
-
 list.innerHTML="Loading...";
 
-const query=await getDocs(collection(db,"users","vaultUser","passwords"));
+const snap=await getDocs(collection(db,"users","vaultUser","passwords"));
 
 let html="";
 
-for(const d of query.docs){
+for(const d of snap.docs){
 
 const data=d.data();
 
@@ -313,9 +330,19 @@ const pass=await decrypt(data.pass);
 
 html+=`
 <div class="pass">
+
 <b>${site}</b><br>
 ${user}<br>
 ${pass}
+
+<div class="actions">
+
+<button class="smallbtn" onclick="editPassword('${d.id}','${site}','${user}','${pass}')">Edit</button>
+
+<button class="smallbtn" onclick="deletePassword('${d.id}')">Delete</button>
+
+</div>
+
 </div>
 `;
 
@@ -325,20 +352,32 @@ list.innerHTML=html;
 
 }
 
-/* SAVE */
+/* save */
 
 async function savePassword(){
-
-try{
 
 const site=document.getElementById("site").value;
 const user=document.getElementById("user").value;
 const pass=document.getElementById("pass").value;
 
 if(!site||!user||!pass){
-alert("Fill all fields");
+popup("Fill all fields","#ef4444");
 return;
 }
+
+if(editId){
+
+await updateDoc(doc(db,"users","vaultUser","passwords",editId),{
+
+site:await encrypt(site),
+user:await encrypt(user),
+pass:await encrypt(pass)
+
+});
+
+popup("Password Updated");
+
+}else{
 
 await addDoc(collection(db,"users","vaultUser","passwords"),{
 
@@ -348,29 +387,78 @@ pass:await encrypt(pass)
 
 });
 
+popup("Password Added");
+
+}
+
 cancelAdd();
+loadPasswords();
+
+}
+
+/* edit */
+
+window.editPassword=(id,site,user,pass)=>{
+
+editId=id;
+
+document.getElementById("site").value=site;
+document.getElementById("user").value=user;
+document.getElementById("pass").value=pass;
+
+document.getElementById("formTitle").innerText="Edit Password";
+
+showAdd();
+
+}
+
+/* delete */
+
+window.deletePassword=async(id)=>{
+
+await deleteDoc(doc(db,"users","vaultUser","passwords",id));
+
+popup("Password Deleted","#ef4444");
 
 loadPasswords();
 
-}catch(err){
-
-alert("Save failed");
-console.error(err);
-
 }
 
-}
+/* search */
 
-/* UI */
+document.getElementById("search").addEventListener("input",function(){
+
+const val=this.value.toLowerCase();
+
+const items=document.querySelectorAll(".pass");
+
+items.forEach(i=>{
+
+if(i.innerText.toLowerCase().includes(val))
+i.style.display="block";
+else
+i.style.display="none";
+
+});
+
+});
+
+/* ui */
 
 function showAdd(){
-
 document.getElementById("vault").style.display="none";
 document.getElementById("add").style.display="block";
-
 }
 
 function cancelAdd(){
+
+editId=null;
+
+document.getElementById("site").value="";
+document.getElementById("user").value="";
+document.getElementById("pass").value="";
+
+document.getElementById("formTitle").innerText="Add Password";
 
 document.getElementById("add").style.display="none";
 document.getElementById("vault").style.display="block";
@@ -378,19 +466,17 @@ document.getElementById("vault").style.display="block";
 }
 
 function lock(){
-
 location.reload();
-
 }
 
-/* BUTTON EVENTS */
+/* buttons */
 
-document.getElementById("loginBtn").onclick=login;
-document.getElementById("bioBtn").onclick=biometricLogin;
-document.getElementById("addBtn").onclick=showAdd;
-document.getElementById("saveBtn").onclick=savePassword;
-document.getElementById("cancelBtn").onclick=cancelAdd;
-document.getElementById("lockBtn").onclick=lock;
+loginBtn.onclick=login;
+bioBtn.onclick=biometricLogin;
+addBtn.onclick=showAdd;
+saveBtn.onclick=savePassword;
+cancelBtn.onclick=cancelAdd;
+lockBtn.onclick=lock;
 
 </script>
 
