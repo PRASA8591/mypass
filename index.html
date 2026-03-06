@@ -4,7 +4,7 @@
 
 <meta name="viewport" content="width=device-width,initial-scale=1">
 
-<title>Secure Pass Vault</title>
+<title>Password Vault</title>
 
 <style>
 
@@ -68,22 +68,20 @@ border-radius:6px;
 
 <input type="password" id="master" placeholder="Master Password">
 
-<button onclick="login()">Unlock with Password</button>
+<button id="loginBtn">Unlock with Password</button>
 
-<button onclick="biometricLogin()">Unlock with Biometrics</button>
+<button id="bioBtn">Unlock with Biometrics</button>
 
 </div>
 
-
 <div id="vault" style="display:none">
 
-<button onclick="showAdd()">Add Password</button>
-<button onclick="logout()">Lock</button>
+<button id="addBtn">Add Password</button>
+<button id="lockBtn">Lock</button>
 
 <div id="list"></div>
 
 </div>
-
 
 <div id="add" class="card" style="display:none">
 
@@ -93,8 +91,8 @@ border-radius:6px;
 <input id="user" placeholder="Username">
 <input id="pass" placeholder="Password">
 
-<button onclick="save()">Save</button>
-<button onclick="cancel()">Cancel</button>
+<button id="saveBtn">Create</button>
+<button id="cancelBtn">Cancel</button>
 
 </div>
 
@@ -106,21 +104,21 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/fireba
 import { getFirestore, doc, setDoc, getDoc, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
 
 const firebaseConfig = {
-apiKey:"AIzaSyCTMFecKL6ab82UC_sfhEVPK8CPe6ZnFEI",
-authDomain:"my-password-92eb6.firebaseapp.com",
-projectId:"my-password-92eb6",
-storageBucket:"my-password-92eb6.firebasestorage.app",
-messagingSenderId:"784477596349",
-appId:"1:784477596349:web:5017c577de3d35f7ab25d4",
-measurementId:"G-ZGNM4LZVGM"
+apiKey: "AIzaSyCTMFecKL6ab82UC_sfhEVPK8CPe6ZnFEI",
+authDomain: "my-password-92eb6.firebaseapp.com",
+projectId: "my-password-92eb6",
+storageBucket: "my-password-92eb6.firebasestorage.app",
+messagingSenderId: "784477596349",
+appId: "1:784477596349:web:5017c577de3d35f7ab25d4",
+measurementId: "G-ZGNM4LZVGM"
 };
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-let key;
+let key = null;
 
-/* ---------- HASH PASSWORD ---------- */
+/* HASH */
 
 async function hash(text){
 
@@ -133,13 +131,13 @@ return btoa(String.fromCharCode(...new Uint8Array(buf)));
 
 }
 
-/* ---------- KEY DERIVATION ---------- */
+/* KEY */
 
 async function deriveKey(password){
 
-const enc=new TextEncoder();
+const enc = new TextEncoder();
 
-const material=await crypto.subtle.importKey(
+const material = await crypto.subtle.importKey(
 "raw",
 enc.encode(password),
 {name:"PBKDF2"},
@@ -162,18 +160,20 @@ false,
 
 }
 
-/* ---------- ENCRYPT ---------- */
+/* ENCRYPT */
 
 async function encrypt(text){
 
-const iv=crypto.getRandomValues(new Uint8Array(12));
+if(!key) throw "Key not ready";
 
-const enc=new TextEncoder().encode(text);
+const iv = crypto.getRandomValues(new Uint8Array(12));
 
-const cipher=await crypto.subtle.encrypt(
+const encoded = new TextEncoder().encode(text);
+
+const cipher = await crypto.subtle.encrypt(
 {name:"AES-GCM",iv},
 key,
-enc
+encoded
 );
 
 return JSON.stringify({
@@ -183,30 +183,37 @@ data:Array.from(new Uint8Array(cipher))
 
 }
 
-/* ---------- DECRYPT ---------- */
+/* DECRYPT */
 
 async function decrypt(obj){
 
-const data=JSON.parse(obj);
+if(!key) throw "Key not ready";
 
-const iv=new Uint8Array(data.iv);
-const buf=new Uint8Array(data.data);
+const data = JSON.parse(obj);
 
-const dec=await crypto.subtle.decrypt(
+const iv = new Uint8Array(data.iv);
+const buf = new Uint8Array(data.data);
+
+const decrypted = await crypto.subtle.decrypt(
 {name:"AES-GCM",iv},
 key,
 buf
 );
 
-return new TextDecoder().decode(dec);
+return new TextDecoder().decode(decrypted);
 
 }
 
-/* ---------- LOGIN ---------- */
+/* LOGIN */
 
-window.login = async function(){
+async function login(){
 
 const password=document.getElementById("master").value;
+
+if(!password){
+alert("Enter password");
+return;
+}
 
 const hashPass=await hash(password);
 
@@ -216,9 +223,7 @@ const snap=await getDoc(ref);
 
 if(!snap.exists()){
 
-await setDoc(ref,{
-masterHash:hashPass
-});
+await setDoc(ref,{masterHash:hashPass});
 
 key=await deriveKey(password);
 
@@ -243,9 +248,9 @@ openVault();
 
 }
 
-/* ---------- BIOMETRIC ---------- */
+/* BIOMETRIC */
 
-window.biometricLogin = async function(){
+async function biometricLogin(){
 
 if(!window.PublicKeyCredential){
 alert("Biometric not supported");
@@ -275,26 +280,30 @@ alert("Biometric cancelled");
 
 }
 
-/* ---------- OPEN VAULT ---------- */
+/* OPEN */
 
-async function openVault(){
+function openVault(){
 
 document.getElementById("login").style.display="none";
 document.getElementById("vault").style.display="block";
 
-load();
+loadPasswords();
 
 }
 
-/* ---------- LOAD PASSWORDS ---------- */
+/* LOAD PASSWORDS */
 
-async function load(){
+async function loadPasswords(){
 
-const q=await getDocs(collection(db,"users/vaultUser/passwords"));
+const list=document.getElementById("list");
+
+list.innerHTML="Loading...";
+
+const query=await getDocs(collection(db,"users","vaultUser","passwords"));
 
 let html="";
 
-for(const d of q.docs){
+for(const d of query.docs){
 
 const data=d.data();
 
@@ -312,19 +321,26 @@ ${pass}
 
 }
 
-document.getElementById("list").innerHTML=html;
+list.innerHTML=html;
 
 }
 
-/* ---------- SAVE PASSWORD ---------- */
+/* SAVE */
 
-window.save = async function(){
+async function savePassword(){
+
+try{
 
 const site=document.getElementById("site").value;
 const user=document.getElementById("user").value;
 const pass=document.getElementById("pass").value;
 
-await addDoc(collection(db,"users/vaultUser/passwords"),{
+if(!site||!user||!pass){
+alert("Fill all fields");
+return;
+}
+
+await addDoc(collection(db,"users","vaultUser","passwords"),{
 
 site:await encrypt(site),
 user:await encrypt(user),
@@ -332,32 +348,49 @@ pass:await encrypt(pass)
 
 });
 
-cancel();
-load();
+cancelAdd();
+
+loadPasswords();
+
+}catch(err){
+
+alert("Save failed");
+console.error(err);
 
 }
 
-/* ---------- UI ---------- */
+}
 
-window.showAdd=function(){
+/* UI */
+
+function showAdd(){
 
 document.getElementById("vault").style.display="none";
 document.getElementById("add").style.display="block";
 
 }
 
-window.cancel=function(){
+function cancelAdd(){
 
 document.getElementById("add").style.display="none";
 document.getElementById("vault").style.display="block";
 
 }
 
-window.logout=function(){
+function lock(){
 
 location.reload();
 
 }
+
+/* BUTTON EVENTS */
+
+document.getElementById("loginBtn").onclick=login;
+document.getElementById("bioBtn").onclick=biometricLogin;
+document.getElementById("addBtn").onclick=showAdd;
+document.getElementById("saveBtn").onclick=savePassword;
+document.getElementById("cancelBtn").onclick=cancelAdd;
+document.getElementById("lockBtn").onclick=lock;
 
 </script>
 
