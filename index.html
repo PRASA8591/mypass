@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Secure Pass Vault</title>
+
+<style>
+
+:root{
+--bg:#0f172a;
+--surface:#1e293b;
+--primary:#3b82f6;
+--text:#f8fafc;
+--border:#334155;
+--danger:#ef4444;
+}
+
+body{
+background:var(--bg);
+color:var(--text);
+font-family:Arial;
+display:flex;
+justify-content:center;
+padding:20px;
+}
+
+.container{
+width:100%;
+max-width:450px;
+}
+
+.card{
+background:var(--surface);
+padding:20px;
+border-radius:10px;
+border:1px solid var(--border);
+}
+
+input{
+width:100%;
+padding:10px;
+margin-bottom:10px;
+border-radius:6px;
+border:1px solid var(--border);
+background:#020617;
+color:white;
+}
+
+button{
+width:100%;
+padding:10px;
+margin-top:5px;
+border:none;
+border-radius:6px;
+background:var(--primary);
+color:white;
+cursor:pointer;
+}
+
+.secondary{
+background:transparent;
+border:1px solid var(--primary);
+}
+
+.danger{
+background:transparent;
+border:1px solid var(--danger);
+color:var(--danger);
+}
+
+.pass{
+border:1px solid var(--border);
+padding:10px;
+margin-top:10px;
+border-radius:6px;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<div id="login" class="card">
+<h2>🔐 Pass Vault</h2>
+
+<input type="password" id="masterPassword" placeholder="Master Password">
+
+<button onclick="unlock()">Unlock</button>
+<button class="secondary" onclick="biometricLogin()">Biometric Login</button>
+
+</div>
+
+
+<div id="app" style="display:none">
+
+<button onclick="showAdd()">Add Password</button>
+<button class="danger" onclick="logout()">Lock</button>
+
+<div id="list"></div>
+
+</div>
+
+
+<div id="add" class="card" style="display:none">
+
+<h3>Add Password</h3>
+
+<input id="site" placeholder="Site">
+<input id="user" placeholder="Username">
+<input id="pass" placeholder="Password">
+
+<button onclick="save()">Save</button>
+<button onclick="cancel()">Cancel</button>
+
+</div>
+
+</div>
+
+
+<script type="module">
+
+/* ---------------- FIREBASE ---------------- */
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+
+const firebaseConfig = {
+apiKey:"AIzaSyCTMFecKL6ab82UC_sfhEVPK8CPe6ZnFEI",
+authDomain:"my-password-92eb6.firebaseapp.com",
+projectId:"my-password-92eb6",
+storageBucket:"my-password-92eb6.firebasestorage.app",
+messagingSenderId:"784477596349",
+appId:"1:784477596349:web:5017c577de3d35f7ab25d4",
+measurementId:"G-ZGNM4LZVGM"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+/* ---------------- CRYPTO ---------------- */
+
+let key;
+
+async function deriveKey(password){
+
+const enc=new TextEncoder();
+
+const keyMaterial=await crypto.subtle.importKey(
+"raw",
+enc.encode(password),
+{name:"PBKDF2"},
+false,
+["deriveKey"]
+);
+
+return crypto.subtle.deriveKey(
+{
+name:"PBKDF2",
+salt:new Uint8Array([1,2,3,4,5,6,7,8]),
+iterations:100000,
+hash:"SHA-256"
+},
+keyMaterial,
+{name:"AES-GCM",length:256},
+false,
+["encrypt","decrypt"]
+);
+
+}
+
+async function encrypt(text){
+
+const iv=crypto.getRandomValues(new Uint8Array(12));
+
+const enc=new TextEncoder().encode(text);
+
+const cipher=await crypto.subtle.encrypt(
+{name:"AES-GCM",iv},
+key,
+enc
+);
+
+return btoa(JSON.stringify({
+iv:Array.from(iv),
+data:Array.from(new Uint8Array(cipher))
+}));
+
+}
+
+async function decrypt(data){
+
+const obj=JSON.parse(atob(data));
+
+const iv=new Uint8Array(obj.iv);
+const buf=new Uint8Array(obj.data);
+
+const dec=await crypto.subtle.decrypt(
+{name:"AES-GCM",iv},
+key,
+buf
+);
+
+return new TextDecoder().decode(dec);
+
+}
+
+/* ---------------- LOGIN ---------------- */
+
+window.unlock=async function(){
+
+const pass=document.getElementById("masterPassword").value;
+
+key=await deriveKey(pass);
+
+document.getElementById("login").style.display="none";
+document.getElementById("app").style.display="block";
+
+load();
+
+}
+
+/* ---------------- BIOMETRIC ---------------- */
+
+window.biometricLogin=async function(){
+
+if(!window.PublicKeyCredential){
+alert("Biometric not supported");
+return;
+}
+
+try{
+
+const challenge=new Uint8Array(32);
+crypto.getRandomValues(challenge);
+
+await navigator.credentials.get({
+publicKey:{
+challenge,
+timeout:60000,
+userVerification:"required"
+}
+});
+
+alert("Biometric success");
+
+unlock();
+
+}catch(e){
+
+alert("Biometric cancelled");
+
+}
+
+}
+
+/* ---------------- PASSWORDS ---------------- */
+
+async function load(){
+
+const q=await getDocs(collection(db,"passwords"));
+
+let html="";
+
+for(const d of q.docs){
+
+const item=d.data();
+
+const site=await decrypt(item.site);
+const user=await decrypt(item.user);
+const pass=await decrypt(item.pass);
+
+html+=`
+<div class="pass">
+<b>${site}</b><br>
+${user}<br>
+${pass}
+<br><br>
+<button onclick="del('${d.id}')">Delete</button>
+</div>
+`;
+
+}
+
+document.getElementById("list").innerHTML=html;
+
+}
+
+window.save=async function(){
+
+const site=document.getElementById("site").value;
+const user=document.getElementById("user").value;
+const pass=document.getElementById("pass").value;
+
+await addDoc(collection(db,"passwords"),{
+
+site:await encrypt(site),
+user:await encrypt(user),
+pass:await encrypt(pass)
+
+});
+
+cancel();
+load();
+
+}
+
+window.del=async function(id){
+
+await deleteDoc(doc(db,"passwords",id));
+
+load();
+
+}
+
+/* ---------------- UI ---------------- */
+
+window.showAdd=function(){
+
+document.getElementById("app").style.display="none";
+document.getElementById("add").style.display="block";
+
+}
+
+window.cancel=function(){
+
+document.getElementById("add").style.display="none";
+document.getElementById("app").style.display="block";
+
+}
+
+window.logout=function(){
+
+location.reload();
+
+}
+
+</script>
+
+</body>
+</html>

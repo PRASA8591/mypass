@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Pass Vault</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --surface: #1e293b;
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: #334155;
+            --danger: #ef4444;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        
+        body { background-color: var(--bg); color: var(--text); display: flex; justify-content: center; min-height: 100vh; }
+        
+        .container { width: 100%; max-width: 480px; padding: 20px; display: flex; flex-direction: column; }
+        
+        h1, h2 { text-align: center; margin-bottom: 20px; }
+        
+        .card { background: var(--surface); padding: 24px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        
+        input { width: 100%; padding: 12px; margin-bottom: 16px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 16px; }
+        
+        button { width: 100%; padding: 12px; border-radius: 8px; border: none; background: var(--primary); color: white; font-size: 16px; font-weight: 600; cursor: pointer; margin-bottom: 10px; transition: 0.2s; }
+        button:hover { background: var(--primary-hover); }
+        button.secondary { background: transparent; border: 1px solid var(--primary); color: var(--primary); }
+        button.danger { background: transparent; border: 1px solid var(--danger); color: var(--danger); margin-top: 10px; }
+        
+        /* Views */
+        #app-view, #add-view { display: none; }
+        
+        /* Password List */
+        .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .header-bar button { width: auto; padding: 8px 16px; margin: 0; }
+        
+        .pass-item { background: var(--surface); border: 1px solid var(--border); padding: 16px; border-radius: 8px; margin-bottom: 12px; }
+        .pass-item h3 { margin-bottom: 8px; color: var(--primary); }
+        .pass-item p { margin-bottom: 4px; font-size: 14px; color: var(--text-muted); }
+        .pass-item .val { color: var(--text); font-family: monospace; font-size: 16px; }
+        
+        .action-btns { display: flex; gap: 10px; margin-top: 10px; }
+        .action-btns button { padding: 6px; font-size: 14px; margin: 0; }
+
+        .error { color: var(--danger); text-align: center; margin-bottom: 15px; display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="login-view" class="card">
+        <h1>🔐 Pass Vault</h1>
+        <p style="text-align:center; margin-bottom: 20px; color: var(--text-muted);">Secure Offline Manager</p>
+        <div id="login-error" class="error">Incorrect password or vault corrupted.</div>
+        <input type="password" id="master-password" placeholder="Enter Master Password">
+        <button onclick="unlockVault()">Unlock Vault</button>
+        <button class="secondary" onclick="triggerBiometric()">Unlock with Biometrics</button>
+        <p style="font-size: 12px; color: var(--text-muted); text-align: center; margin-top: 15px;">
+            First time? Entering a password will create a new vault.
+        </p>
+    </div>
+
+    <div id="app-view">
+        <div class="header-bar">
+            <h2>Your Vault</h2>
+            <button class="danger" onclick="logout()">Lock</button>
+        </div>
+        <button onclick="showAddView()">+ Add New Password</button>
+        <div id="password-list" style="margin-top: 20px;"></div>
+    </div>
+
+    <div id="add-view" class="card">
+        <h2>Add Password</h2>
+        <input type="text" id="site-name" placeholder="Website Name / URL (e.g. google.com)">
+        <input type="text" id="site-user" placeholder="Username / Email">
+        <input type="text" id="site-pass" placeholder="Password">
+        <button onclick="savePassword()">Save to Vault</button>
+        <button class="secondary" onclick="showAppView()">Cancel</button>
+    </div>
+</div>
+
+<script>
+    // --- STATE ---
+    let masterKey = null;
+    let vaultData = [];
+    const STORAGE_KEY = 'secure_vault_data';
+    
+    // Hardcoded salt for local single-file PBKDF2 derivation
+    const salt = new Uint8Array([89, 112, 23, 45, 100, 21, 55, 99, 12, 33, 77, 88, 19, 42, 66, 73]);
+
+    // --- CRYPTOGRAPHY ---
+    async function deriveKey(password) {
+        const enc = new TextEncoder();
+        const keyMaterial = await crypto.subtle.importKey(
+            "raw", enc.encode(password), {name: "PBKDF2"}, false, ["deriveKey"]
+        );
+        return await crypto.subtle.deriveKey(
+            {name: "PBKDF2", salt: salt, iterations: 100000, hash: "SHA-256"},
+            keyMaterial, {name: "AES-GCM", length: 256}, false, ["encrypt", "decrypt"]
+        );
+    }
+
+    async function encryptData(data, key) {
+        const iv = crypto.getRandomValues(new Uint8Array(12));
+        const enc = new TextEncoder();
+        const ciphertext = await crypto.subtle.encrypt(
+            {name: "AES-GCM", iv: iv}, key, enc.encode(JSON.stringify(data))
+        );
+        
+        // Pack IV and Ciphertext together
+        const bundle = new Uint8Array(iv.length + ciphertext.byteLength);
+        bundle.set(iv, 0);
+        bundle.set(new Uint8Array(ciphertext), iv.length);
+        return btoa(String.fromCharCode(...bundle));
+    }
+
+    async function decryptData(base64Data, key) {
+        try {
+            const binaryStr = atob(base64Data);
+            const bundle = new Uint8Array(binaryStr.length);
+            for(let i=0; i<binaryStr.length; i++) bundle[i] = binaryStr.charCodeAt(i);
+            
+            const iv = bundle.slice(0, 12);
+            const ciphertext = bundle.slice(12);
+            
+            const decrypted = await crypto.subtle.decrypt(
+                {name: "AES-GCM", iv: iv}, key, ciphertext
+            );
+            return JSON.parse(new TextDecoder().decode(decrypted));
+        } catch (e) {
+            return null; // Decryption failed (wrong password)
+        }
+    }
+
+    // --- APP LOGIC ---
+    async function unlockVault() {
+        const passInput = document.getElementById('master-password').value;
+        if (!passInput) return;
+
+        const key = await deriveKey(passInput);
+        const storedData = localStorage.getItem(STORAGE_KEY);
+
+        if (!storedData) {
+            // New Vault setup
+            masterKey = key;
+            vaultData = [];
+            await syncVault();
+            document.getElementById('master-password').value = '';
+            showAppView();
+        } else {
+            // Existing Vault decryption
+            const decrypted = await decryptData(storedData, key);
+            if (decrypted) {
+                masterKey = key;
+                vaultData = decrypted;
+                document.getElementById('master-password').value = '';
+                document.getElementById('login-error').style.display = 'none';
+                showAppView();
+            } else {
+                document.getElementById('login-error').style.display = 'block';
+            }
+        }
+    }
+
+    async function syncVault() {
+        if (!masterKey) return;
+        const encrypted = await encryptData(vaultData, masterKey);
+        localStorage.setItem(STORAGE_KEY, encrypted);
+        renderPasswords();
+    }
+
+    async function savePassword() {
+        const site = document.getElementById('site-name').value;
+        const user = document.getElementById('site-user').value;
+        const pass = document.getElementById('site-pass').value;
+
+        if (!site || !user || !pass) return alert("Please fill all fields");
+
+        vaultData.push({ id: Date.now(), site, user, pass });
+        await syncVault();
+        
+        document.getElementById('site-name').value = '';
+        document.getElementById('site-user').value = '';
+        document.getElementById('site-pass').value = '';
+        showAppView();
+    }
+
+    function deletePassword(id) {
+        if(confirm("Delete this password?")) {
+            vaultData = vaultData.filter(item => item.id !== id);
+            syncVault();
+        }
+    }
+
+    function copyToClipboard(text) {
+        navigator.clipboard.writeText(text);
+        alert("Copied to clipboard!");
+    }
+
+    function renderPasswords() {
+        const list = document.getElementById('password-list');
+        list.innerHTML = '';
+        
+        if(vaultData.length === 0) {
+            list.innerHTML = '<p style="text-align:center; color: var(--text-muted);">No passwords saved yet.</p>';
+            return;
+        }
+
+        vaultData.forEach(item => {
+            const div = document.createElement('div');
+            div.className = 'pass-item';
+            div.innerHTML = `
+                <h3>${item.site}</h3>
+                <p>Username: <span class="val">${item.user}</span></p>
+                <p>Password: <span class="val">••••••••</span></p>
+                <div class="action-btns">
+                    <button class="secondary" onclick="copyToClipboard('${item.user}')">Copy User</button>
+                    <button class="secondary" onclick="copyToClipboard('${item.pass}')">Copy Pass</button>
+                    <button class="danger" onclick="deletePassword(${item.id})">Delete</button>
+                </div>
+            `;
+            list.appendChild(div);
+        });
+    }
+
+    // --- BIOMETRICS (WEBAUTHN DEMO) ---
+    async function triggerBiometric() {
+        if (!window.PublicKeyCredential) {
+            alert("WebAuthn is not supported on this browser.");
+            return;
+        }
+        try {
+            // This creates a dummy challenge just to trigger the OS Biometric/Passkey prompt
+            const challenge = new Uint8Array(32);
+            crypto.getRandomValues(challenge);
+            
+            await navigator.credentials.create({
+                publicKey: {
+                    challenge: challenge,
+                    rp: { name: "Pass Vault Local", id: window.location.hostname || "localhost" },
+                    user: { id: new Uint8Array(16), name: "user@local", displayName: "Local User" },
+                    pubKeyCredParams: [{ type: "public-key", alg: -7 }],
+                    authenticatorSelection: { userVerification: "required" },
+                    timeout: 60000
+                }
+            });
+            alert("Biometric verified! (Note: In a pure offline HTML file, you still need the master password to decrypt the AES-GCM vault mathematically).");
+        } catch (e) {
+            alert("Biometric prompt failed or was cancelled. Ensure you are on localhost or HTTPS.");
+            console.error(e);
+        }
+    }
+
+    // --- VIEW ROUTING ---
+    function showAppView() {
+        document.getElementById('login-view').style.display = 'none';
+        document.getElementById('add-view').style.display = 'none';
+        document.getElementById('app-view').style.display = 'block';
+        renderPasswords();
+    }
+
+    function showAddView() {
+        document.getElementById('app-view').style.display = 'none';
+        document.getElementById('add-view').style.display = 'block';
+    }
+
+    function logout() {
+        masterKey = null;
+        vaultData = [];
+        document.getElementById('app-view').style.display = 'none';
+        document.getElementById('login-view').style.display = 'block';
+    }
+</script>
+</body>
+</html>
