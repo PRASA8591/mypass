@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PrasaTek Ultimate Vault</title>
+    <title>PrasaTek Advanced Vault</title>
     <style>
         :root {
             --bg: #0f172a; --surface: #1e293b; --surface-hover: #334155;
@@ -24,7 +24,6 @@
         
         .card { background: var(--surface); padding: 24px; border-radius: 16px; border: 1px solid var(--border); box-shadow: 0 10px 30px rgba(0,0,0,0.15); }
         h2 { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem; text-align: center; }
-        .text-center { text-align: center; }
         
         input, select, textarea { 
             width: 100%; padding: 12px; margin-bottom: 12px; border-radius: 8px; 
@@ -36,7 +35,7 @@
         button { 
             width: 100%; padding: 12px; border-radius: 8px; border: none; 
             background: var(--primary); color: white; font-weight: 600; 
-            cursor: pointer; transition: 0.2s; display: flex; justify-content: center; align-items: center; gap: 8px; font-size: 15px;
+            cursor: pointer; transition: 0.2s; display: flex; justify-content: center; align-items: center; gap: 8px; font-size: 14px;
         }
         button:hover { background: var(--primary-hover); transform: translateY(-1px); }
         button:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
@@ -45,31 +44,34 @@
         .btn-danger { background: transparent; border: 1px solid var(--danger); color: var(--danger); }
         .btn-warning { background: transparent; border: 1px solid var(--warning); color: var(--warning); }
         
-        /* Dashboard Stats */
         .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
         .stat-card { background: var(--surface); padding: 15px; border-radius: 12px; border: 1px solid var(--border); text-align: center; }
         .stat-val { font-size: 20px; font-weight: 800; color: var(--primary); }
         .stat-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; margin-top: 4px; }
 
-        /* Item UI */
+        /* Enhanced Pass Item with Favicon */
         .pass-item { background: var(--surface); border: 1px solid var(--border); padding: 16px; border-radius: 12px; margin-bottom: 12px; transition: 0.2s;}
         .pass-item:hover { border-color: var(--primary); }
-        .pass-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; border-bottom: 1px solid var(--border); padding-bottom: 8px;}
-        .pass-header h4 { font-size: 16px; display: flex; align-items: center; gap: 8px; margin: 0; color: var(--primary); word-break: break-all;}
-        .tag { font-size: 10px; padding: 3px 8px; border-radius: 12px; background: var(--text-muted); color: white; }
+        .pass-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 10px;}
+        .site-title { display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 600; color: var(--primary); word-break: break-all; }
+        .site-icon { width: 24px; height: 24px; border-radius: 50%; background: var(--bg); object-fit: cover; }
+        .tag { font-size: 10px; padding: 3px 8px; border-radius: 12px; background: var(--text-muted); color: white; white-space: nowrap; }
         
         .field-row { display: flex; align-items: center; background: var(--bg); border-radius: 6px; padding: 8px 12px; margin-bottom: 6px; }
-        .field-row span { font-family: monospace; flex-grow: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
+        .field-label { font-size: 11px; color: var(--text-muted); width: 50px; text-transform: uppercase; }
+        .field-row span.val { font-family: monospace; flex-grow: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; margin-left: 10px;}
         .icon-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 4px; width: auto; font-size: 16px; }
         .icon-btn:hover { color: var(--text); }
         
-        /* Advanced Generator UI */
         .gen-box { background: var(--bg); border: 1px solid var(--border); padding: 15px; border-radius: 8px; margin-bottom: 15px; }
         .checkbox-group { display: flex; gap: 15px; margin-top: 10px; font-size: 13px; color: var(--text-muted); flex-wrap: wrap; }
         .checkbox-group label { display: flex; align-items: center; gap: 5px; cursor: pointer; }
         .strength-meter { height: 4px; border-radius: 2px; background: var(--border); margin-bottom: 12px; transition: 0.3s; width: 0%; }
 
-        /* Toasts & Timers */
+        /* Custom Fields UI */
+        .custom-field-group { display: flex; gap: 8px; margin-bottom: 8px; }
+        .custom-field-group input { margin-bottom: 0; }
+        
         #toast-container { position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; z-index: 1000; }
         .toast { padding: 12px 20px; border-radius: 8px; color: white; font-weight: 500; font-size: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); animation: slideIn 0.3s ease-out forwards; opacity: 0; transform: translateX(100%); }
         @keyframes slideIn { to { opacity: 1; transform: translateX(0); } }
@@ -85,31 +87,31 @@
 
 <div class="container">
     <div style="display: flex; justify-content: space-between; align-items: center;">
-        <span style="font-size: 12px; font-weight: 600; color: var(--text-muted);" id="connStatus">🟡 Connecting to Database...</span>
+        <span style="font-size: 12px; font-weight: 600; color: var(--text-muted);" id="connStatus">🟡 Checking Network...</span>
         <button id="themeBtn" style="width:auto; background:none; font-size: 20px; padding: 4px;" title="Toggle Theme">🌓</button>
     </div>
 
     <div id="auth-view" class="card">
         <h2 id="auth-title">Checking Vault...</h2>
-        <p id="auth-desc" class="text-center" style="font-size: 14px; color: var(--text-muted); margin-bottom: 20px;">Please wait.</p>
+        <p id="auth-desc" style="text-align: center; font-size: 14px; color: var(--text-muted); margin-bottom: 20px;">Please wait.</p>
         
         <div id="auth-inputs" class="hidden">
             <input type="password" id="master-input" placeholder="Master Password" autocomplete="current-password">
             <input type="password" id="master-confirm" placeholder="Confirm Master Password" class="hidden">
             
             <button id="auth-btn">Unlock Vault</button>
-            <button id="bio-login-btn" class="btn-secondary hidden" style="margin-top: 10px;">👆 Unlock with Fingerprint/FaceID</button>
+            <button id="bio-login-btn" class="btn-secondary hidden" style="margin-top: 10px; border-color: var(--primary); color: var(--primary);">👆 Scan Fingerprint / Face</button>
         </div>
     </div>
 
     <div id="vault-view" class="hidden">
-        <div id="autoLockTimer" class="timer-bar" title="Auto-locks after 5 minutes of inactivity"></div>
+        <div id="autoLockTimer" class="timer-bar" title="Auto-lock timer"></div>
         
         <div class="header-bar">
             <h2 style="margin: 0;">My Vault</h2>
             <div style="display: flex; gap: 8px;">
-                <button id="export-btn" class="btn-warning" style="width:auto; padding: 6px 12px; font-size: 12px;">📥 Backup</button>
-                <button id="setup-bio-btn" class="btn-secondary" style="width:auto; padding: 6px 12px; font-size: 12px;" title="Setup Biometrics">👆</button>
+                <button id="export-btn" class="btn-warning" style="width:auto; padding: 6px 12px; font-size: 12px;">📥</button>
+                <button id="open-settings-btn" class="btn-secondary" style="width:auto; padding: 6px 12px; font-size: 12px;" title="Settings">⚙️</button>
                 <button id="lock-btn" class="btn-danger" style="width:auto; padding: 6px 12px; font-size: 12px;">🔒</button>
             </div>
         </div>
@@ -128,9 +130,34 @@
         <div id="item-list"></div>
     </div>
 
+    <div id="settings-view" class="card hidden">
+        <h2>⚙️ Vault Settings</h2>
+        
+        <h4 style="margin-top: 15px; margin-bottom: 8px; color: var(--primary);">Biometric Authentication</h4>
+        <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px;">Bind this specific device's fingerprint or Face ID scanner to your vault.</p>
+        <button id="setup-bio-btn" class="btn-secondary">👆 Setup / Re-register Biometrics</button>
+
+        <h4 style="margin-top: 25px; margin-bottom: 8px; color: var(--primary);">Security Options</h4>
+        <label style="font-size: 12px; color: var(--text-muted);">Auto-Lock Timeout</label>
+        <select id="timeout-select">
+            <option value="1">1 Minute</option>
+            <option value="5" selected>5 Minutes</option>
+            <option value="15">15 Minutes</option>
+        </select>
+
+        <h4 style="margin-top: 25px; margin-bottom: 8px; color: var(--danger);">Change Master Password</h4>
+        <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px;">This will decrypt and re-encrypt all your data. Do not interrupt this process.</p>
+        <input type="password" id="new-master" placeholder="New Master Password">
+        <button id="change-master-btn" class="btn-danger">Update Password</button>
+
+        <button id="close-settings-btn" class="btn-secondary" style="margin-top: 25px;">Back to Vault</button>
+    </div>
+
     <div id="edit-view" class="card hidden">
         <h2 id="edit-title">Add New Password</h2>
-        <input type="text" id="f-site" placeholder="Website / App Name (e.g. GitHub)">
+        <input type="text" id="f-site" placeholder="Website Domain (e.g. github.com)">
+        <p style="font-size:11px; color:var(--text-muted); margin-top:-8px; margin-bottom:12px;">Use the domain name (e.g. netflix.com) to auto-fetch the logo.</p>
+        
         <input type="text" id="f-user" placeholder="Username or Email">
         
         <div style="display:flex; gap: 10px; margin-bottom: 5px;">
@@ -141,16 +168,10 @@
 
         <div class="gen-box">
             <div style="display: flex; justify-content: space-between; font-size: 13px; color: var(--text-muted); margin-bottom: 5px;">
-                <span>Password Length</span>
-                <span id="len-val">16</span>
+                <span>Length</span><span id="len-val">16</span>
             </div>
             <input type="range" id="f-len" min="8" max="64" value="16" style="margin-bottom: 5px; width: 100%;">
-            <div class="checkbox-group">
-                <label><input type="checkbox" id="c-upper" checked> Uppercase</label>
-                <label><input type="checkbox" id="c-num" checked> Numbers</label>
-                <label><input type="checkbox" id="c-sym" checked> Symbols</label>
-            </div>
-            <button id="gen-pass-btn" class="btn-secondary" style="margin-top: 10px; padding: 8px;" type="button">🎲 Generate Secure Password</button>
+            <button id="gen-pass-btn" class="btn-secondary" style="padding: 8px;" type="button">🎲 Generate</button>
         </div>
         
         <select id="f-cat">
@@ -159,8 +180,12 @@
             <option value="Finance">Finance</option>
             <option value="Social">Social</option>
         </select>
+
+        <h4 style="font-size: 13px; color: var(--primary); margin-top: 15px; margin-bottom: 10px;">Advanced Details</h4>
+        <div id="custom-fields-container"></div>
+        <button id="add-field-btn" class="btn-secondary" style="font-size: 12px; padding: 6px; margin-bottom: 12px;">+ Add Custom Field (PIN, 2FA, etc.)</button>
         
-        <textarea id="f-notes" placeholder="Secure Notes (Security questions, API keys, etc.)"></textarea>
+        <textarea id="f-notes" placeholder="Secure Notes"></textarea>
 
         <div style="display:flex; gap:10px; margin-top: 10px;">
             <button id="save-btn">Save to Vault</button>
@@ -184,7 +209,8 @@ const firebaseConfig = {
 
 let db, encryptionKey, isFirstTime = false, currentEditId = null, vaultItems = [];
 let autoLockTimer, inactivityTimeout;
-const AUTO_LOCK_MINS = 5;
+let AUTO_LOCK_MINS = parseInt(localStorage.getItem("vaultTimeout") || "5");
+document.getElementById('timeout-select').value = AUTO_LOCK_MINS;
 
 // --- UTILITIES ---
 function showToast(msg, type = "success") {
@@ -199,19 +225,25 @@ function showToast(msg, type = "success") {
 
 function bufferToBase64(buf) { return btoa(String.fromCharCode.apply(null, new Uint8Array(buf))); }
 function base64ToBuffer(b64) {
-    const bin = window.atob(b64);
-    const bytes = new Uint8Array(bin.length);
+    const bin = window.atob(b64); const bytes = new Uint8Array(bin.length);
     for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
     return bytes.buffer;
+}
+
+function extractDomain(url) {
+    let domain = url;
+    if (domain.indexOf("://") > -1) domain = domain.split('/')[2];
+    else domain = domain.split('/')[0];
+    domain = domain.split(':')[0];
+    return domain.toLowerCase();
 }
 
 // --- INITIALIZATION ---
 async function init() {
     try {
         db = getFirestore(initializeApp(firebaseConfig));
-        document.getElementById('connStatus').innerText = "🟢 Online (Firebase)";
+        document.getElementById('connStatus').innerText = "🟢 System Online";
         
-        // CHECK IF DATABASE IS EMPTY TO TRIGGER SETUP MODE
         const userRef = doc(db, "users", "vaultUser");
         const snap = await getDoc(userRef);
 
@@ -219,32 +251,29 @@ async function init() {
 
         if (!snap.exists()) {
             isFirstTime = true;
-            document.getElementById('auth-title').innerText = "🛡️ Create Your Vault";
-            document.getElementById('auth-desc').innerText = "Welcome! Create a Master Password. You will use this to log in from now on.";
-            document.getElementById('master-confirm').classList.remove('hidden'); // Show confirm box
-            document.getElementById('auth-btn').innerText = "Save Master Password";
+            document.getElementById('auth-title').innerText = "🛡️ Initialize Vault";
+            document.getElementById('auth-desc').innerText = "Set a Master Password. Do not forget it.";
+            document.getElementById('master-confirm').classList.remove('hidden');
+            document.getElementById('auth-btn').innerText = "Create Vault";
         } else {
             isFirstTime = false;
             document.getElementById('auth-title').innerText = "🔐 Vault Locked";
-            document.getElementById('auth-desc').innerText = "Enter your master password to decrypt your data.";
+            document.getElementById('auth-desc').innerText = "Enter password or scan fingerprint.";
             document.getElementById('auth-btn').innerText = "Unlock Vault";
             
-            // Show biometric button if previously configured
+            // Check if Biometrics are registered on THIS specific device
             if (localStorage.getItem("bioCredId") && localStorage.getItem("localVaultKey")) {
                 document.getElementById("bio-login-btn").classList.remove("hidden");
             }
         }
     } catch(e) {
-        console.error("Init Error:", e);
-        document.getElementById('connStatus').innerText = "🔴 Database Connection Error";
-        document.getElementById('auth-desc').innerText = "Failed to connect to Firebase. Check console.";
+        document.getElementById('connStatus').innerText = "🔴 Offline Mode";
     }
 }
 
 // --- CRYPTOGRAPHY ---
 async function hashText(text) {
-    const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
-    return bufferToBase64(buf);
+    return bufferToBase64(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)));
 }
 
 async function deriveKey(password, saltBase64) {
@@ -252,7 +281,7 @@ async function deriveKey(password, saltBase64) {
     const material = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), {name: "PBKDF2"}, false, ["deriveKey"]);
     return crypto.subtle.deriveKey(
         { name: "PBKDF2", salt: saltBuffer, iterations: 100000, hash: "SHA-256" },
-        material, {name: "AES-GCM", length: 256}, true, ["encrypt", "decrypt"] // Must be true for Biometrics export
+        material, {name: "AES-GCM", length: 256}, true, ["encrypt", "decrypt"] // Extractable for local biometric cache
     );
 }
 
@@ -273,62 +302,46 @@ async function decryptData(base64String) {
     } catch (e) { return null; }
 }
 
-// --- AUTHENTICATION (The Fix) ---
+// --- AUTHENTICATION ---
 document.getElementById('auth-btn').onclick = async () => {
     const password = document.getElementById('master-input').value;
     const confirmPass = document.getElementById('master-confirm').value;
 
-    if (password.length < 6) return showToast("Password must be at least 6 characters!", "error");
-
+    if (password.length < 6) return showToast("Password must be 6+ chars", "error");
     const btn = document.getElementById('auth-btn');
-    btn.disabled = true; btn.innerText = "Processing...";
+    btn.disabled = true; btn.innerText = "Decrypting...";
 
     try {
         if (isFirstTime) {
-            // Setup Mode Verification
-            if (password !== confirmPass) {
-                btn.disabled = false; btn.innerText = "Save Master Password";
-                return showToast("Passwords do not match!", "error");
-            }
-
-            // 1. Generate Salt & Hash
-            const saltBuffer = crypto.getRandomValues(new Uint8Array(16));
-            const salt = bufferToBase64(saltBuffer);
+            if (password !== confirmPass) throw new Error("Passwords mismatch");
+            const salt = bufferToBase64(crypto.getRandomValues(new Uint8Array(16)));
             const hash = await hashText(password);
             
-            // 2. Save to Firebase permanently
-            await setDoc(doc(db, "users", "vaultUser"), { salt: salt, masterHash: hash });
-            
-            // 3. Derive Key & Enter Vault
+            await setDoc(doc(db, "users", "vaultUser"), { salt, masterHash: hash });
             encryptionKey = await deriveKey(password, salt);
-            showToast("Master Password Saved Successfully!");
-            openVault();
+            showToast("Vault Created!"); openVault();
         } else {
-            // Login Mode
             const snap = await getDoc(doc(db, "users", "vaultUser"));
             const data = snap.data();
-            
-            const inputHash = await hashText(password);
-            if (inputHash !== data.masterHash) throw new Error("Incorrect Password");
+            if ((await hashText(password)) !== data.masterHash) throw new Error("Incorrect Password");
             
             encryptionKey = await deriveKey(password, data.salt);
-            showToast("Vault Unlocked!");
-            openVault();
+            showToast("Unlocked!"); openVault();
         }
     } catch (err) {
-        showToast(err.message === "Incorrect Password" ? "Incorrect Password" : "Login Failed", "error");
-        btn.disabled = false; 
-        btn.innerText = isFirstTime ? "Save Master Password" : "Unlock Vault";
+        showToast(err.message === "Incorrect Password" ? "Incorrect Password" : "Setup Failed", "error");
+        btn.disabled = false; btn.innerText = isFirstTime ? "Create Vault" : "Unlock Vault";
     }
 };
 
-// --- BIOMETRICS ---
+// --- ADVANCED BIOMETRICS ---
 async function setupBiometrics() {
     if (!window.PublicKeyCredential) return showToast("Biometrics not supported here.", "error");
     try {
         const challenge = crypto.getRandomValues(new Uint8Array(32));
         const userId = crypto.getRandomValues(new Uint8Array(16));
         
+        // Asks OS to register the specific fingerprint/face
         const credential = await navigator.credentials.create({
             publicKey: {
                 challenge: challenge,
@@ -340,11 +353,13 @@ async function setupBiometrics() {
             }
         });
 
+        // Store the AES key locally, protected by the OS Biometric Wall
         const exportedKey = await crypto.subtle.exportKey("raw", encryptionKey);
         localStorage.setItem("bioCredId", bufferToBase64(credential.rawId));
         localStorage.setItem("localVaultKey", bufferToBase64(exportedKey));
         
-        showToast("✅ Fingerprint/FaceID Enabled!");
+        showToast("✅ Biometrics Linked to this Device!");
+        document.getElementById("bio-login-btn").classList.remove("hidden");
     } catch (e) {
         showToast("Biometric setup cancelled/failed.", "error");
     }
@@ -354,21 +369,23 @@ async function loginWithBiometrics() {
     try {
         const credIdBase64 = localStorage.getItem("bioCredId");
         const localKeyBase64 = localStorage.getItem("localVaultKey");
-        
-        if (!credIdBase64 || !localKeyBase64) return showToast("Biometrics not set up.", "error");
+        if (!credIdBase64 || !localKeyBase64) return showToast("No biometrics saved.", "error");
 
         const credId = new Uint8Array(base64ToBuffer(credIdBase64));
+        
+        // This triggers the Fingerprint/FaceID prompt. It ONLY succeeds if the OS verifies it's you.
         await navigator.credentials.get({
             publicKey: { challenge: crypto.getRandomValues(new Uint8Array(32)), allowCredentials: [{ type: "public-key", id: credId }], userVerification: "required" }
         });
 
+        // If OS verifies, we pull the key from secure local storage
         const rawKey = new Uint8Array(base64ToBuffer(localKeyBase64));
         encryptionKey = await crypto.subtle.importKey("raw", rawKey, {name: "AES-GCM", length: 256}, true, ["encrypt", "decrypt"]);
 
         showToast("Unlocked via Biometrics 🔓");
         openVault();
     } catch (e) {
-        showToast("Biometric auth failed.", "error");
+        showToast("Biometric auth rejected.", "error");
     }
 }
 
@@ -391,10 +408,10 @@ function startAutoLock() {
 function openVault() {
     document.getElementById('auth-view').classList.add('hidden');
     document.getElementById('vault-view').classList.remove('hidden');
+    document.getElementById('settings-view').classList.add('hidden');
     document.getElementById('master-input').value = "";
     document.getElementById('master-confirm').value = "";
-    startAutoLock(); 
-    loadItems();
+    startAutoLock(); loadItems();
 }
 
 async function loadItems() {
@@ -430,30 +447,65 @@ function renderList(items) {
     
     list.innerHTML = items.map(item => {
         const catColor = item.cat === 'Work' ? '#3b82f6' : (item.cat === 'Finance' ? '#22c55e' : (item.cat === 'Social' ? '#eab308' : '#64748b'));
+        const domain = extractDomain(item.site);
+        // Using Google's reliable favicon service
+        const iconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+        
+        let customFieldsHtml = '';
+        if (item.customFields && item.customFields.length > 0) {
+            customFieldsHtml = item.customFields.map(f => `
+                <div class="field-row" style="background: rgba(0,0,0,0.1);">
+                    <span class="field-label">${f.key}</span>
+                    <span class="val" id="c-${item.id}-${f.key}">••••••••</span>
+                    <button class="icon-btn" onclick="toggleCustom('${item.id}', '${f.key}', '${f.val.replace(/'/g, "\\'")}')">👁️</button>
+                    <button class="icon-btn" onclick="copyText('${f.val.replace(/'/g, "\\'")}')">📋</button>
+                </div>
+            `).join('');
+        }
+
         return `
         <div class="pass-item">
             <div class="pass-header">
-                <h4>${item.site} <span class="tag" style="background:${catColor}">${item.cat || 'General'}</span></h4>
-                <div style="display:flex; gap:2px;">
+                <div class="site-title">
+                    <img src="${iconUrl}" class="site-icon" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjOTRhM2I4IiBzdHJva2Utd2lkdGg9IjIiPjxwYXRoIGQ9Ik0xMiAyQTIgMiAwIDAgMCAxMCA0djFIOEExIDEgMCAwIDAgNyA2djE0YTEgMSAwIDAgMCAxIDFoOGExIDEgMCAwIDAgMS0xVjZhMSAxIDAgMCAwLTEtMUgxM1Y0YTIgMiAwIDAgMCAtMi0yeiIvPjwvc3ZnPg=='">
+                    ${item.site}
+                </div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span class="tag" style="background:${catColor}">${item.cat || 'General'}</span>
                     <button class="icon-btn" onclick="editItem('${item.id}')">✏️</button>
                     <button class="icon-btn" onclick="deleteItem('${item.id}')">🗑️</button>
                 </div>
             </div>
             <div class="field-row">
-                <span>${item.user}</span>
+                <span class="field-label">USER</span>
+                <span class="val">${item.user}</span>
                 <button class="icon-btn" onclick="copyText('${item.user}')">📋</button>
             </div>
             <div class="field-row">
-                <span id="p-${item.id}">••••••••</span>
+                <span class="field-label">PASS</span>
+                <span class="val" id="p-${item.id}">••••••••</span>
                 <button class="icon-btn" onclick="togglePass('${item.id}', '${item.pass.replace(/'/g, "\\'")}')">👁️</button>
                 <button class="icon-btn" onclick="copyText('${item.pass.replace(/'/g, "\\'")}')">📋</button>
             </div>
-            ${item.notes ? `<div style="font-size:12px; color:var(--text-muted); margin-top:8px; padding:8px; background:var(--bg); border-radius:6px;">📝 ${item.notes}</div>` : ''}
+            ${customFieldsHtml}
+            ${item.notes ? `<div style="font-size:12px; color:var(--text-muted); margin-top:8px; padding:8px; background:var(--bg); border-radius:6px; white-space: pre-wrap;">📝 ${item.notes}</div>` : ''}
         </div>`;
     }).join('');
 }
 
-// --- CRUD & UI ACTIONS ---
+// --- CRUD & DYNAMIC FIELDS ---
+document.getElementById('add-field-btn').onclick = () => {
+    const container = document.getElementById('custom-fields-container');
+    const id = Date.now();
+    container.insertAdjacentHTML('beforeend', `
+        <div class="custom-field-group" id="cf-${id}">
+            <input type="text" placeholder="Field Name (e.g. PIN)" style="flex: 1;" class="cf-key">
+            <input type="text" placeholder="Value" style="flex: 2;" class="cf-val">
+            <button class="btn-danger" style="width: auto; padding: 0 10px;" onclick="document.getElementById('cf-${id}').remove()">X</button>
+        </div>
+    `);
+};
+
 document.getElementById('save-btn').onclick = async () => {
     const site = document.getElementById('f-site').value.trim();
     const user = document.getElementById('f-user').value.trim();
@@ -462,8 +514,22 @@ document.getElementById('save-btn').onclick = async () => {
     if(!site || !pass) return showToast("Site and Password required!", "error");
     const btn = document.getElementById('save-btn'); btn.disabled = true;
 
+    // Gather Custom Fields
+    const customFields = [];
+    document.querySelectorAll('.custom-field-group').forEach(group => {
+        const k = group.querySelector('.cf-key').value.trim();
+        const v = group.querySelector('.cf-val').value.trim();
+        if(k && v) customFields.push({ key: k, val: v });
+    });
+
     try {
-        const payload = await encryptData({ site, user, pass, cat: document.getElementById('f-cat').value, notes: document.getElementById('f-notes').value });
+        const payload = await encryptData({ 
+            site, user, pass, 
+            cat: document.getElementById('f-cat').value, 
+            notes: document.getElementById('f-notes').value,
+            customFields: customFields
+        });
+        
         if (currentEditId) await updateDoc(doc(db, "users", "vaultUser", "passwords", currentEditId), { payload });
         else await addDoc(collection(db, "users", "vaultUser", "passwords"), { payload });
         
@@ -483,7 +549,23 @@ window.editItem = (id) => {
     document.getElementById('f-pass').value = item.pass;
     document.getElementById('f-cat').value = item.cat || 'General';
     document.getElementById('f-notes').value = item.notes || '';
-    checkStrength(item.pass);
+    
+    // Load custom fields
+    const container = document.getElementById('custom-fields-container');
+    container.innerHTML = '';
+    if (item.customFields) {
+        item.customFields.forEach(f => {
+            const fid = Date.now() + Math.random();
+            container.insertAdjacentHTML('beforeend', `
+                <div class="custom-field-group" id="cf-${fid}">
+                    <input type="text" value="${f.key}" style="flex: 1;" class="cf-key">
+                    <input type="text" value="${f.val.replace(/"/g, '&quot;')}" style="flex: 2;" class="cf-val">
+                    <button class="btn-danger" style="width: auto; padding: 0 10px;" onclick="document.getElementById('cf-${fid}').remove()">X</button>
+                </div>
+            `);
+        });
+    }
+
     document.getElementById('vault-view').classList.add('hidden');
     document.getElementById('edit-view').classList.remove('hidden');
 };
@@ -494,13 +576,14 @@ window.deleteItem = async (id) => {
     showToast("Deleted!"); loadItems();
 };
 
-window.copyText = (text) => { navigator.clipboard.writeText(text); showToast("Copied to clipboard!"); };
+window.copyText = (text) => { navigator.clipboard.writeText(text); showToast("Copied!"); };
 window.togglePass = (id, val) => { const el = document.getElementById(`p-${id}`); el.innerText = el.innerText === "••••••••" ? val : "••••••••"; };
+window.toggleCustom = (id, key, val) => { const el = document.getElementById(`c-${id}-${key}`); el.innerText = el.innerText === "••••••••" ? val : "••••••••"; };
 
 document.getElementById('add-btn').onclick = () => {
     currentEditId = null; document.getElementById('edit-title').innerText = "Add New Password";
     ['f-site','f-user','f-pass','f-notes'].forEach(id => document.getElementById(id).value = '');
-    document.getElementById('strength-meter').style.width = "0%";
+    document.getElementById('custom-fields-container').innerHTML = '';
     document.getElementById('vault-view').classList.add('hidden'); document.getElementById('edit-view').classList.remove('hidden');
 };
 function closeEdit() { document.getElementById('edit-view').classList.add('hidden'); document.getElementById('vault-view').classList.remove('hidden'); }
@@ -511,49 +594,77 @@ document.getElementById('search').addEventListener('input', (e) => {
     renderList(vaultItems.filter(i => i.site.toLowerCase().includes(q) || i.user.toLowerCase().includes(q) || (i.cat||'').toLowerCase().includes(q)));
 });
 
-// Generator & Strength
-function checkStrength(pass) {
-    const m = document.getElementById('strength-meter');
-    let s = 0;
-    if(pass.length > 7) s+=25; if(pass.length > 12) s+=25;
-    if(/[A-Z]/.test(pass)) s+=15; if(/[0-9]/.test(pass)) s+=15; if(/[^A-Za-z0-9]/.test(pass)) s+=20;
-    m.style.width = s + '%';
-    m.style.background = s < 50 ? 'var(--danger)' : (s < 80 ? 'var(--warning)' : 'var(--success)');
-}
-document.getElementById('f-pass').addEventListener('input', (e) => checkStrength(e.target.value));
+// Settings & Master Pass Change
+document.getElementById('open-settings-btn').onclick = () => { document.getElementById('vault-view').classList.add('hidden'); document.getElementById('settings-view').classList.remove('hidden'); };
+document.getElementById('close-settings-btn').onclick = openVault;
 
-document.getElementById('f-len').addEventListener('input', (e) => document.getElementById('len-val').innerText = e.target.value);
+document.getElementById('timeout-select').addEventListener('change', (e) => {
+    AUTO_LOCK_MINS = parseInt(e.target.value);
+    localStorage.setItem("vaultTimeout", AUTO_LOCK_MINS);
+    startAutoLock(); showToast("Timeout updated");
+});
+
+document.getElementById('change-master-btn').onclick = async () => {
+    const newPass = document.getElementById('new-master').value;
+    if (newPass.length < 6) return showToast("Must be 6+ chars", "error");
+    if (!confirm("Are you sure? This will rewrite your entire database.")) return;
+    
+    const btn = document.getElementById('change-master-btn'); btn.disabled = true; btn.innerText = "Re-encrypting Database...";
+
+    try {
+        const newSaltBuffer = crypto.getRandomValues(new Uint8Array(16));
+        const newSalt = bufferToBase64(newSaltBuffer);
+        const newHash = await hashText(newPass);
+        const newKey = await deriveKey(newPass, newSalt);
+
+        // Re-encrypt all items
+        for (const item of vaultItems) {
+            const cleanItem = { site: item.site, user: item.user, pass: item.pass, cat: item.cat, notes: item.notes, customFields: item.customFields };
+            const iv = crypto.getRandomValues(new Uint8Array(12));
+            const cipherBuffer = await crypto.subtle.encrypt({name: "AES-GCM", iv}, newKey, new TextEncoder().encode(JSON.stringify(cleanItem)));
+            const bundle = new Uint8Array(iv.length + cipherBuffer.byteLength); bundle.set(iv, 0); bundle.set(new Uint8Array(cipherBuffer), iv.length);
+            
+            await updateDoc(doc(db, "users", "vaultUser", "passwords", item.id), { payload: bufferToBase64(bundle) });
+        }
+
+        // Save new master
+        await setDoc(doc(db, "users", "vaultUser"), { salt: newSalt, masterHash: newHash });
+        encryptionKey = newKey;
+        
+        // Clear old biometrics
+        localStorage.removeItem("bioCredId"); localStorage.removeItem("localVaultKey");
+        
+        document.getElementById('new-master').value = '';
+        showToast("Master Password Changed Successfully!");
+        openVault();
+    } catch(e) {
+        showToast("Error updating database", "error");
+    } finally {
+        btn.disabled = false; btn.innerText = "Update Password";
+    }
+};
+
 document.getElementById('gen-pass-btn').onclick = () => {
     const len = parseInt(document.getElementById('f-len').value);
     let chars = "abcdefghijklmnopqrstuvwxyz";
     if(document.getElementById('c-upper').checked) chars += "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     if(document.getElementById('c-num').checked) chars += "0123456789";
     if(document.getElementById('c-sym').checked) chars += "!@#$%^&*()_+~`|}{[]:;?><,./-=";
-    
-    let pass = "";
-    const values = new Uint32Array(len); crypto.getRandomValues(values);
+    let pass = ""; const values = new Uint32Array(len); crypto.getRandomValues(values);
     for (let i = 0; i < len; i++) pass += chars[values[i] % chars.length];
-    
-    const pInput = document.getElementById('f-pass');
-    pInput.value = pass; pInput.type = "text";
-    checkStrength(pass);
+    const pInput = document.getElementById('f-pass'); pInput.value = pass; pInput.type = "text";
 };
 
-document.getElementById('toggle-vis-btn').onclick = () => {
-    const p = document.getElementById('f-pass'); p.type = p.type === "password" ? "text" : "password";
-};
-
-// Top Buttons
+document.getElementById('f-len').addEventListener('input', (e) => document.getElementById('len-val').innerText = e.target.value);
+document.getElementById('toggle-vis-btn').onclick = () => { const p = document.getElementById('f-pass'); p.type = p.type === "password" ? "text" : "password"; };
 document.getElementById('themeBtn').onclick = () => document.body.dataset.theme = document.body.dataset.theme === 'light' ? 'dark' : 'light';
 document.getElementById('lock-btn').onclick = () => location.reload();
 document.getElementById('setup-bio-btn').onclick = setupBiometrics;
 document.getElementById('bio-login-btn').onclick = loginWithBiometrics;
-
 document.getElementById('export-btn').onclick = () => {
     if(!vaultItems.length) return showToast("Vault is empty", "warning");
-    const blob = new Blob([JSON.stringify(vaultItems, null, 2)], { type: "application/json" });
-    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `Vault_Backup.json`;
-    a.click(); showToast("Exported JSON");
+    const blob = new Blob([JSON.stringify(vaultItems.map(({id, ...rest}) => rest), null, 2)], { type: "application/json" });
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `Vault_Backup.json`; a.click();
 };
 
 init();
